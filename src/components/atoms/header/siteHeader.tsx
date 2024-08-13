@@ -31,7 +31,7 @@ const SiteHeader = () => {
     const localUserInfo = getAppLocalStorageByName("userInfo");
     if (localUserInfo && localUserInfo.access_token) {
       setUserInfo(localUserInfo);
-      // router.push('/dashboard');
+      router.push('/dashboard');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

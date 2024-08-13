@@ -11,7 +11,6 @@ import { useSetupSocketQuery } from '@/store/api/socket-api';
 import { useLazyGetSocketUriQuery } from '@/store/api/market-info';
 import { timeToLocal } from '@/lib/utils';
 import Chain from '@/components/organisms/chain/chain';
-import { rsi } from 'indicatorts';
 const defaultConfig = { period: 14 };
 
 
@@ -21,11 +20,11 @@ const Dashboard = () => {
 
     const [getSocketUrl] = useLazyGetSocketUriQuery();
     const { data } = useGetHistoricalTimeDataQuery({});
-    // const { data: realData } = useSetupSocketQuery(webSocketUrl ? webSocketUrl : '');
+    const { data: realData } = useSetupSocketQuery(webSocketUrl ? webSocketUrl : '');
 
     useEffect(() => {
         if (!webSocketUrl) {
-            getSocketUrl().unwrap().then(res => {
+            getSocketUrl().unwrap().then((res: any) => {
                 setWebSocketUrl(res.data.authorizedRedirectUri);
             });
         }
@@ -37,8 +36,8 @@ const Dashboard = () => {
         if (data && data.status === "success") {
             const { candles } = data.data;
             if (candles.length) {
-                const candleClosePrice = candles.map((candle: any) => candle[4])
-                const result = rsi(candleClosePrice, defaultConfig);
+                // const candleClosePrice = candles.map((candle: any) => candle[4])
+                // const result = rsi(candleClosePrice, defaultConfig);
                 const candleData = candles.map((candle: any, index: number) => {
                     return {
                         time: timeToLocal(+new Date(candle[0])),
@@ -46,7 +45,7 @@ const Dashboard = () => {
                         high: candle[2],
                         low: candle[3],
                         close: candle[4],
-                        rsi: result[index]
+                        // rsi: result[index]
                     }
                 });
 
@@ -64,6 +63,7 @@ const Dashboard = () => {
             }}
             WatchList={<WatchList handleWatchListSelect={() => { }} />}
         >
+            "Hello"
             <TvChart />
             <Chain />
         </ContentLayout>
