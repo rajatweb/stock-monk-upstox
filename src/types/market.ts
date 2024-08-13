@@ -8,7 +8,7 @@ export type ICandleData = {
     high: number
     low: number
     close: number
-    time: any
+    date: Date
     interval?: string
     volume?: number
     rsi?: any

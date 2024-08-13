@@ -8,13 +8,13 @@
 // }
 
 type IData = {
-    mode: String
-    instrumentKeys: [String]
+    mode: string
+    instrumentKeys: string[]
 }
 
 export type ISocketPayload = {
-    guid: String
-    method: String
+    guid: string
+    method: string
     data: IData
 }
 

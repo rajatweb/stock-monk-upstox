@@ -21,7 +21,7 @@ const Dashboard = () => {
 
     const [getSocketUrl] = useLazyGetSocketUriQuery();
     const { data } = useGetHistoricalTimeDataQuery({});
-    const { data: realData } = useSetupSocketQuery(webSocketUrl ? webSocketUrl : '');
+    // const { data: realData } = useSetupSocketQuery(webSocketUrl ? webSocketUrl : '');
 
     useEffect(() => {
         if (!webSocketUrl) {

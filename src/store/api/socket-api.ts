@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { RootState } from '../store';
 import { Buffer } from "buffer";
 
-import { FeedResponse } from "../../proto/marketDataFeed_pb";
+import { FeedResponse, FullFeed } from "../../proto/marketDataFeed_pb";
 import { socketActions } from '../slice/socket-slice';
 import { timeToLocal } from '@/lib/utils';
 import { ICandleData } from '@/types/market';
@@ -70,7 +70,7 @@ export const socketApi = createApi({
                     dispatch
                 }
             ) {
-                let intervalId: ReturnType<typeof setInterval>;
+                let intervalId: ReturnType<typeof setInterval> | null = null;
                 const ws = socket(arg);
                 ws.addEventListener("open", () => {
                     console.log("WebSocket connection successfully established");
@@ -82,18 +82,19 @@ export const socketApi = createApi({
                             instrumentKeys: ["NSE_INDEX|Nifty Bank"],
                         },
                     };
-                    ws.send(Buffer.from(JSON.stringify(data)));
+                    // ws.send(Buffer.from(JSON.stringify(data)));
                     // sendData(Buffer.from(JSON.stringify(data)));
                     // Send a heartbeat every 2 minutes to keep the connection alive
+                    if(!intervalId)
                     intervalId = setInterval(() => {
                         // sendData(Buffer.from(JSON.stringify(data)));
                         ws.send(Buffer.from(JSON.stringify(data)));
-                    }, 1000 * 60);
+                    }, 1000 * 10);
                 });
                 ws.addEventListener("close", () => {
                     console.log("WebSocket disconnect");
                     if (intervalId) {
-                        clearInterval(intervalId);
+                        intervalId = null;
                     }
                 });
 
@@ -109,12 +110,21 @@ export const socketApi = createApi({
                     };
 
                     const listener = async (event: MessageEvent) => {
+                        if (intervalId) {
+                            intervalId = null;
+                        }
                         const arrayBuffer = await blobToArrayBuffer(event.data);
                         let buffer = Buffer.from(arrayBuffer as ArrayBuffer);
                         let response = FeedResponse.fromBinary(buffer);
-                        const FullFeed = response.feeds["NSE_INDEX|Nifty Bank"].FeedUnion.value;
-                        const finalValue = FullFeed?.FullFeedUnion?.value?.marketOHLC.ohlc[1];
+                        const FullFeed = response.feeds["NSE_INDEX|Nifty Bank"].FeedUnion.value as FullFeed;
+                        if(FullFeed && FullFeed?.FullFeedUnion?.value?.marketOHLC){
+                            const finalValue = FullFeed?.FullFeedUnion?.value?.marketOHLC.ohlc[1];
+                            console.log(finalValue,'finalValue')
+                        }
+                        
                         // console.log("🚀 ~ listener ~ finalValue:", finalValue);
+
+                        
 
                         // dispatch(socketActions.setRealTimeData([{
                         //     open: finalValue.open,
