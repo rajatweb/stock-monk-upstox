@@ -1,6 +1,6 @@
 import { FeedResponse, FullFeed } from "@/proto/marketDataFeed_pb";
 import { ISocketPayload } from "@/types/api/scoket";
-import { useEffect, useState,useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { ICandleData } from "@/types/market";
 
 const blobToArrayBuffer = async (blob: Blob) => {
@@ -18,7 +18,7 @@ const useLiveData = () => {
   const [webSocketUrl, setWebSocketUrl] = useState("");
   const [messages, setMessages] = useState<ICandleData[]>([]);
   const timeoutRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [messagePayload,setMessagePayload] = useState<{payload:Buffer,delay:number}|null>(null)
+  const [messagePayload, setMessagePayload] = useState<{ payload: Buffer, delay: number } | null>(null)
 
   useEffect(() => {
     if (webSocketUrl && !socket) {
@@ -59,20 +59,20 @@ const useLiveData = () => {
       };
     }
     return () => {
-            if (timeoutRef.current) {
-              clearTimeout(timeoutRef.current); // Clear timeout if the component unmounts
-            }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current); // Clear timeout if the component unmounts
+      }
 
-        }
+    }
   }, [webSocketUrl]);
 
   useEffect(() => {
     if (socket && messagePayload) {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current); // Clear timeout if the component unmounts
-        }
-        socket.send(messagePayload.payload);
-        timeoutRef.current = setInterval(() => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current); // Clear timeout if the component unmounts
+      }
+      socket.send(messagePayload.payload);
+      timeoutRef.current = setInterval(() => {
         socket.send(messagePayload.payload);
       }, messagePayload.delay);
 
@@ -83,7 +83,7 @@ const useLiveData = () => {
         }
       };
     }
-  }, [socket,messagePayload]);
+  }, [socket, messagePayload]);
 
   const sendMessage = (message: ISocketPayload) => {
     const payload = Buffer.from(JSON.stringify(message));
@@ -92,20 +92,20 @@ const useLiveData = () => {
     }
   };
 
-  const sendMessageWithDelay = (message:ISocketPayload, delay:number) => {
+  const sendMessageWithDelay = (message: ISocketPayload, delay: number) => {
     const payload = Buffer.from(JSON.stringify(message));
-    setMessagePayload({payload,delay:1000*delay})
+    setMessagePayload({ payload, delay: 1000 * delay })
   };
 
 
-  const setUrl = (url:string)=>{
+  const setUrl = (url: string) => {
     setWebSocketUrl(url);
   };
 
 
 
 
-  return { messages, sendMessage,setUrl,socketStatus:!!socket,sendMessageWithDelay };
+  return { messages, sendMessage, setUrl, socketStatus: !!socket, sendMessageWithDelay };
 };
 
 export default useLiveData;
