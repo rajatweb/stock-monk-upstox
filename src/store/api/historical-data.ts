@@ -20,7 +20,7 @@ export const historicalDataApi = createApi({
             query: (payload) => {
                 const { instrument_key, interval } = payload
                 return {
-                    url: `/historical-candle/NSE_INDEX|Nifty Bank/1minute/2024-08-12/2024-08-08`,
+                    url: `/historical-candle/NSE_INDEX|Nifty Bank/1minute/2024-08-28/2024-08-13`,
                     params: payload
                 }
             },

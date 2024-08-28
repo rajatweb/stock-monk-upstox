@@ -1,129 +1,109 @@
-// src/CandlestickChart.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import * as d3 from 'd3';
 
-interface Candle {
-  timestamp: Date;
+interface CandlestickData {
+  date: Date;
   open: number;
   high: number;
   low: number;
   close: number;
 }
 
-const CandlestickChart: React.FC = () => {
+interface ScrollableCandlestickChartProps {
+  data: CandlestickData[];
+}
+
+const ScrollableCandlestickChart: React.FC<ScrollableCandlestickChartProps> = ({ data }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
-  const [data, setData] = useState<Candle[]>([]);
-  const [dimensions, setDimensions] = useState({ width: 800, height: 800 });
-  const margin = { top: 20, right: 20, bottom: 50, left: 50 };
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [chartWidth, setChartWidth] = useState<number>(1000); // Initial width
+  const [scrollWidth, setScrollWidth] = useState<number>(0);
+  const [xDomain, setXDomain] = useState<[Date, Date]>([
+    new Date(data[0].date), 
+    new Date(data[data.length - 1].date)
+  ]);
 
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!svgRef.current || !containerRef.current) return;
 
     const svg = d3.select(svgRef.current);
-    svg.selectAll('*').remove(); // Clear previous content
+    const height = 400; // Adjust as needed
 
-    const width = dimensions.width - margin.left - margin.right;
-    const height = dimensions.height - margin.top - margin.bottom;
+    // Set up SVG dimensions
+    svg.attr('width', chartWidth)
+       .attr('height', height);
 
     const xScale = d3.scaleTime()
-      .domain(d3.extent(data, d => d.timestamp) as [Date, Date])
-      .range([0, width]);
+      .domain(xDomain)
+      .range([0, chartWidth]);
 
     const yScale = d3.scaleLinear()
       .domain([d3.min(data, d => d.low) || 0, d3.max(data, d => d.high) || 0])
-      .nice()
       .range([height, 0]);
 
-    // Create x and y axes
+    // Clear existing content
+    svg.selectAll('*').remove();
+
+    // Draw x-axis
+    const xAxis = d3.axisBottom(xScale).ticks(d3.timeMinute.every(1));
     svg.append('g')
-      .attr('transform', `translate(${margin.left},${height + margin.top})`)
-      .call(d3.axisBottom(xScale).ticks(d3.timeMinute.every(1)).tickFormat((d)=>d3.timeFormat('%H:%M:%S')(d as Date)));
+      .attr('transform', `translate(0, ${height - 20})`)
+      .call(xAxis);
 
+    // Draw y-axis
+    const yAxis = d3.axisLeft(yScale);
     svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`)
-      .call(d3.axisLeft(yScale));
+      .attr('transform', `translate(20, 0)`)
+      .call(yAxis);
 
-    // Add candlesticks
-    const candlesGroup = svg.append('g')
-      .attr('transform', `translate(${margin.left},${margin.top})`);
+    // Draw candlesticks
+    const candlestickWidth = 10; // Adjust as needed
+    const candleGroup = svg.append('g')
+      .attr('transform', `translate(20, 0)`);
 
-    candlesGroup.selectAll('.candle')
+    candleGroup.selectAll('line.high-low')
       .data(data)
-      .enter().append('g')
+      .enter().append('line')
+      .attr('class', 'high-low')
+      .attr('x1', d => xScale(d.date))
+      .attr('x2', d => xScale(d.date))
+      .attr('y1', d => yScale(d.high))
+      .attr('y2', d => yScale(d.low))
+      .attr('stroke', 'black');
+
+    candleGroup.selectAll('rect.candle')
+      .data(data)
+      .enter().append('rect')
       .attr('class', 'candle')
-      .attr('transform', d => `translate(${xScale(d.timestamp)}, 0)`)
-      .each(function(d) {
-        const candleGroup = d3.select(this);
+      .attr('x', d => xScale(d.date) - candlestickWidth / 2)
+      .attr('y', d => yScale(Math.max(d.open, d.close)))
+      .attr('width', candlestickWidth)
+      .attr('height', d => yScale(Math.min(d.open, d.close)) - yScale(Math.max(d.open, d.close)))
+      .attr('fill', d => d.open > d.close ? 'red' : 'green');
 
-        // Draw wick
-        candleGroup.append('line')
-          .attr('x1', 0)
-          .attr('x2', 0)
-          .attr('y1', yScale(d.high))
-          .attr('y2', yScale(d.low))
-          .attr('stroke', d.open > d.close ? 'red' : 'green')
-          .attr('stroke-width', 2);
+    // Update scroll width
+    setScrollWidth(xScale(d3.max(data, d => d.date) || new Date()) - xScale(d3.min(data, d => d.date) || new Date()));
 
-        // Draw body
-        candleGroup.append('rect')
-          .attr('x', -2)
-          .attr('y', yScale(Math.max(d.open, d.close)))
-          .attr('width', 4)
-          .attr('height', yScale(Math.min(d.open, d.close)) - yScale(Math.max(d.open, d.close)))
-          .attr('fill', d.open > d.close ? 'red' : 'green');
-      });
+  }, [data, chartWidth, xDomain]);
 
-    // Add tooltip for better UX
-    const tooltip = d3.select(svgRef.current)
-      .append('div')
-      .attr('class', 'tooltip')
-      .style('opacity', 0);
-
-    // candlesGroup.selectAll('.candle')
-    //   .on('mouseover', (event, d) => {
-    //     tooltip.transition().duration(200).style('opacity', .9);
-    //     tooltip.html(`Open: ${d.open}<br/>High: ${d.high}<br/>Low: ${d.low}<br/>Close: ${d.close}`)
-    //       .style('left', `${event.pageX + 5}px`)
-    //       .style('top', `${event.pageY - 28}px`);
-    //   })
-    //   .on('mouseout', () => {
-    //     tooltip.transition().duration(500).style('opacity', 0);
-    //   });
-  }, [data, dimensions]);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setDimensions({ width: window.innerWidth - 40, height: 400 });
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize();
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const now = new Date();
-      setData(prevData => {
-        const newCandle: Candle = {
-          timestamp: now,
-          open: Math.random() * 100 + 100, // Mock data
-          high: Math.random() * 10 + 110,
-          low: Math.random() * 10 + 90,
-          close: Math.random() * 10 + 100
-        };
-        // Update the last minute of data
-        return [...prevData.filter(d => now.getTime() - d.timestamp.getTime() < 60000), newCandle];
-      });
-    }, 1000);
-
-    return () => clearInterval(intervalId);
-  }, []);
+  const handleScroll = (event: React.UIEvent<HTMLDivElement, UIEvent>) => {
+    const scrollLeft = event.currentTarget.scrollLeft;
+    const newDomain = [
+      new Date(xDomain[0].getTime() + (scrollLeft / chartWidth) * (scrollWidth - chartWidth)),
+      new Date(xDomain[0].getTime() + ((scrollLeft + chartWidth) / chartWidth) * (scrollWidth - chartWidth))
+    ] as [Date, Date];
+    setXDomain(newDomain);
+  };
 
   return (
-    <svg ref={svgRef} width={dimensions.width} height={dimensions.height}></svg>
+    <div
+      ref={containerRef}
+      style={{ overflowX: 'scroll', width: '100%' }}
+      onScroll={handleScroll}
+    >
+      <svg ref={svgRef} />
+    </div>
   );
 };
 
-export default CandlestickChart;
+export default ScrollableCandlestickChart;
